@@ -3,6 +3,13 @@ import AppBarTab from "./AppBarTab";
 import Constants from "expo-constants";
 import theme from "../theme";
 
+import { ME } from "../graphql/queries";
+import { useQuery } from "@apollo/client";
+import { useApolloClient } from "@apollo/client";
+import { useEffect } from "react";
+import useAuthStorage from "../hooks/useAuthStorage";
+import { useNavigate } from "react-router-native";
+
 const styles = StyleSheet.create({
   container: {
     paddingTop: Constants.statusBarHeight + 20,
@@ -19,6 +26,27 @@ const styles = StyleSheet.create({
 });
 
 const AppBar = () => {
+  const { data, loading, error } = useQuery(ME);
+  const client = useApolloClient();
+  const authStorage = useAuthStorage();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (data) {
+      console.log("me data", data);
+      client.resetStore();
+    }
+  }, [data]);
+
+  const handleSignout = () => {
+    console.log("signing out");
+    authStorage.removeAccessToken().then(() => {
+      console.log("token removed");
+      client.resetStore();
+      navigate("/");
+    });
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -35,7 +63,11 @@ const AppBar = () => {
         }}
       >
         <AppBarTab text="Repositories" to="/" />
-        <AppBarTab text="Sign in" to="signin" />
+        {data && data.me ? (
+          <AppBarTab text="Sign out" to="signin" handler={handleSignout} />
+        ) : (
+          <AppBarTab text="Sign in" to="signin" />
+        )}
       </ScrollView>
     </View>
   );

@@ -12,12 +12,16 @@ const styles = StyleSheet.create({
   },
 });
 
-const AppBarTab = ({ text, to }) => {
-  return (
-    <Pressable onPress={() => console.log("pressed")}>
+const AppBarTab = ({ text, to, handler }) => {
+  return !handler ? (
+    <Pressable style={{ zIndex: 10 }}>
       <Link to={to}>
         <Text style={styles.text}>{text}</Text>
       </Link>
+    </Pressable>
+  ) : (
+    <Pressable style={{ zIndex: 10 }} onPress={handler}>
+      <Text style={styles.text}>{text}</Text>
     </Pressable>
   );
 };
