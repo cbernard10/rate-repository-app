@@ -7,7 +7,7 @@ import { Link } from "react-router-native";
 const styles = StyleSheet.create({
   text: {
     color: "#ffffff",
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: "bold",
   },
 });

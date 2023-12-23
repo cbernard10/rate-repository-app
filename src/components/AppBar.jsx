@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
 });
 
 const AppBar = () => {
-  const { data, loading, error } = useQuery(ME);
+  const { data } = useQuery(ME);
   const client = useApolloClient();
   const authStorage = useAuthStorage();
   const navigate = useNavigate();
@@ -60,14 +60,20 @@ const AppBar = () => {
           borderColor: "red",
           borderStyle: "solid",
           color: "#222222",
+          gap: 20,
+          paddingVertical: 20,
         }}
       >
         <AppBarTab text="Repositories" to="/" />
+        <AppBarTab text="Create a review" to="review" />
+        <AppBarTab text="My reviews" to="myreviews" />
         {data && data.me ? (
           <AppBarTab text="Sign out" to="signin" handler={handleSignout} />
         ) : (
           <AppBarTab text="Sign in" to="signin" />
         )}
+
+        <AppBarTab text="Sign up" to="signup" />
       </ScrollView>
     </View>
   );

@@ -1,70 +1,180 @@
-import { FlatList, View, StyleSheet } from "react-native";
-
-import { useState, useEffect } from "react";
-
+import { FlatList, View } from "react-native";
 import RepositoryItem from "./RepositoryItem";
-import { useQuery } from "@apollo/client";
-import { GET_REPOSITORIES } from "../graphql/queries";
 import useRepositories from "../hooks/useRepositories";
+import { useEffect, useState } from "react";
+import { Picker } from "@react-native-picker/picker";
+import { Pressable, Text } from "react-native";
+import { TextInput } from "react-native";
+import { useDebounce } from "use-debounce";
 
-const styles = StyleSheet.create({
-  separator: {
-    height: 10,
-  },
-});
+const ItemSeparator = () => (
+  <View
+    style={{
+      height: 10,
+    }}
+  />
+);
 
-const ItemSeparator = () => <View style={styles.separator} />;
+const SortMenu = ({ setOrderBy, setOrderDirection }) => {
+  const [selectedOrder, setSelectedOrder] = useState();
 
-const RepositoryList = () => {
-    const { repositories, loading } = useRepositories();
+  return (
+    <Picker
+      selectedValue={selectedOrder}
+      onValueChange={(itemValue) => {
+        const [orderBy, orderDirection] = itemValue.split(",");
 
-//   const { data, error, loading } = useQuery(GET_REPOSITORIES, {
-//     fetchPolicy: "cache-and-network",
-//   });
+        setSelectedOrder(itemValue);
+        setOrderBy(orderBy);
+        setOrderDirection(orderDirection);
+      }}
+    >
+      <Picker.Item label="Latest repositories" value="CREATED_AT,ASC" />
+      <Picker.Item
+        label="Highest rated repositories"
+        value="RATING_AVERAGE,DESC"
+      />
+      <Picker.Item
+        label="Lowest rated repositories"
+        value="RATING_AVERAGE,ASC"
+      />
+    </Picker>
+  );
+};
 
-//   const [repositories, setRepositories] = useState();
+const SearchField = ({ setSearchQuery }) => {
+  return (
+    <View style={{ padding: 20, backgroundColor: "white" }}>
+      <TextInput
+        style={{ color: "black", fontSize: 20 }}
+        placeholder="Search"
+        onChange={(e) => {
+          setSearchQuery(e.nativeEvent.text);
+        }}
+      />
+    </View>
+  );
+};
 
-//   useEffect(() => {
-//     if (data) {
-//       setRepositories(data.repositories);
-//     }
-//   }, [data]);
-
-//   if (error) {
-//     console.log(error);
-//     return null;
-//   }
-
-  // Get the nodes from the edges array
+export const RepositoryListContainer = ({
+  repositories,
+  setOrderBy,
+  setOrderDirection,
+  setSearchQuery,
+  onEndReach,
+}) => {
   const repositoryNodes = repositories
     ? repositories.edges.map((edge) => edge.node)
     : [];
-  if (loading) {
-    return null;
-  }
+
+  const [showSortMenu, setShowSortMenu] = useState(false);
+
   return (
-    <FlatList
-      data={repositoryNodes}
-      ItemSeparatorComponent={ItemSeparator}
-      renderItem={({ item }) => <RepositoryItem item={item} />}
-      // other props
+    <View>
+      <SearchField setSearchQuery={setSearchQuery} />
+
+      {showSortMenu ? (
+        <View>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              padding: 20,
+            }}
+          >
+            <Pressable
+              onPress={() => {
+                setShowSortMenu(false);
+              }}
+              style={{
+                display: "flex",
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexGrow: 1,
+              }}
+            >
+              <Text style={{ fontSize: 20 }}>Sort by</Text>
+              <Text style={{ fontSize: 20 }}>▲</Text>
+            </Pressable>
+          </View>
+          <SortMenu
+            setOrderBy={setOrderBy}
+            setOrderDirection={setOrderDirection}
+          />
+        </View>
+      ) : (
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-around",
+            padding: 20,
+          }}
+        >
+          <Pressable
+            onPress={() => {
+              setShowSortMenu(true);
+            }}
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexGrow: 1,
+            }}
+          >
+            <Text style={{ fontSize: 20 }}>Sort by</Text>
+            <Text style={{ fontSize: 20 }}>▼</Text>
+          </Pressable>
+        </View>
+      )}
+
+      <FlatList
+        data={repositoryNodes}
+        ItemSeparatorComponent={ItemSeparator}
+        renderItem={({ item }) => (
+          <RepositoryItem item={item} style={{ padding: 20 }} />
+        )}
+        onEndReached={onEndReach}
+        onEndReachedThreshold={0.5}
+      />
+    </View>
+  );
+};
+
+// orderBy, orderDirection, searchKeyword, first, after
+
+const RepositoryList = () => {
+  const [orderBy, setOrderBy] = useState("CREATED_AT");
+  const [orderDirection, setOrderDirection] = useState("DESC");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 500);
+  const { repositories, refetch, fetchMore } = useRepositories(
+    {orderBy,
+    orderDirection,
+    searchKeyword: debouncedSearchQuery,
+    first: 4
+  },
+
+  );
+
+  const onEndReach = () => {
+    fetchMore();
+  };
+
+  useEffect(() => {
+    refetch(orderBy, orderDirection, debouncedSearchQuery);
+  }, [orderBy, orderDirection, debouncedSearchQuery]);
+
+  return (
+    <RepositoryListContainer
+      repositories={repositories}
+      setOrderBy={setOrderBy}
+      setOrderDirection={setOrderDirection}
+      setSearchQuery={setSearchQuery}
+      onEndReach={onEndReach}
     />
   );
 };
-// Get the nodes from the edges array
-//   const repositoryNodes = repositories
-//     ? repositories.edges.map((edge) => edge.node)
-//     : [];
-//   if (loading) {
-//     return null;
-//   }
-//   return (
-//     <FlatList
-//       data={repositoryNodes}
-//       ItemSeparatorComponent={ItemSeparator}
-//       renderItem={({ item }) => <RepositoryItem item={item} />}
-//       // other props
-//     />
-//   );
 
 export default RepositoryList;

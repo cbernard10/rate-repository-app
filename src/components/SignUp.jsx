@@ -1,19 +1,26 @@
 import { Formik } from "formik";
-import SignInForm from "./Forms/SignInForm/SignInForm";
+import SignUpForm from "./Forms/SignUpForm/SignUpForm";
 import useSignIn from "../hooks/useSignIn";
 import * as yup from "yup";
+import { useMutation } from "@apollo/client";
+import { CREATE_USER } from "../graphql/mutations";
+import { useNavigate } from "react-router-native";
 
 const initialValues = {
   username: "",
   password: "",
+  passwordConfirmation: "",
 };
 
 const validationSchema = yup.object().shape({
   username: yup.string().min(4).max(30).required("Username is required"),
   password: yup.string().min(6).max(30).required("Password is required"),
+  passwordConfirmation: yup
+    .string()
+    .oneOf([yup.ref("password"), null], "Passwords must match"),
 });
 
-export const SignInContainer = ({
+export const SignUpContainer = ({
   initialValues,
   validationSchema,
   onSubmit,
@@ -24,24 +31,39 @@ export const SignInContainer = ({
       onSubmit={onSubmit}
       validationSchema={validationSchema}
     >
-      {({ handleSubmit }) => <SignInForm onSubmit={handleSubmit} />}
+      {({ handleSubmit }) => <SignUpForm onSubmit={handleSubmit} />}
     </Formik>
   );
 };
 
-const SignIn = () => {
+const SignUp = () => {
+
+  const [mutate] = useMutation(CREATE_USER);
   const [signIn] = useSignIn();
+  const navigate = useNavigate();
+
   const onSubmit = async (values) => {
     const { username, password } = values;
     try {
+      const { data } = await mutate({
+        variables: {
+          user: {
+            username,
+            password,
+          },
+        },
+      });
+
       await signIn({ username, password });
+      navigate("/");
+      console.log(data);
     } catch (e) {
       throw new Error(e);
     }
   };
 
   return (
-    <SignInContainer
+    <SignUpContainer
       initialValues={initialValues}
       validationSchema={validationSchema}
       onSubmit={onSubmit}
@@ -49,4 +71,4 @@ const SignIn = () => {
   );
 };
 
-export default SignIn;
+export default SignUp;
